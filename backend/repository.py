@@ -2,7 +2,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 
-from models import Transaction
+from backend.models import Transaction
 
 def add_transaction(db: Session, data) -> Transaction:
     txn = Transaction(

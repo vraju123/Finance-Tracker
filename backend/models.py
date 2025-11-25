@@ -8,6 +8,7 @@ class Transaction(Base):
     date = Column(Date, index=True)
     amount = Column(Float, nullable=False)
     category = Column(String(20), nullable=False) # "Income" / "Expense"
+    sub_category = Column(String(50), nullable=False)  # "Food", "Rent", etc.
     description = Column(String(255), nullable=False)
     
     

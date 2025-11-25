@@ -1,6 +1,25 @@
 import { useState } from "react";
 import { createTransaction, fetchSummary } from "./api";
 
+const expenseCategories = [
+  "Food",
+  "Rent",
+  "Shopping",
+  "Transportation",
+  "Entertainment",
+  "Bills",
+  "Health",
+  "Other",
+];
+
+const incomeCategories = [
+  "Salary",
+  "Bonus",
+  "Investment",
+  "Gift",
+  "Other",
+];
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10); // yyyy-mm-dd
 }
@@ -10,7 +29,8 @@ function App() {
   const [form, setForm] = useState({
     date: todayISO(),
     amount: "",
-    category: "Income",
+    category: "Income",      // Income or Expense (type)
+    subCategory: "Salary",   // specific category within Income/Expense
     description: "",
   });
 
@@ -24,7 +44,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [summaryRequested, setSummaryRequested] = useState(false);
 
-  // Add transaction handler (keeps add section behavior, just no auto-summary)
+  // Add transaction
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -32,22 +52,22 @@ function App() {
         date: form.date,
         amount: Number(form.amount),
         category: form.category,
+        sub_category: form.subCategory,
         description: form.description || null,
       });
-      // Clear only amount + description after submit
+      // Clear amount + description; keep date/type/category
       setForm((f) => ({
         ...f,
         amount: "",
         description: "",
       }));
-      // Do NOT auto-load summary here; user must request it explicitly
     } catch (e) {
       console.error("Add transaction error:", e.response?.data || e.message);
       alert("Failed to add transaction");
     }
   }
 
-  // Load summary only when user explicitly requests it
+  // Load summary only when explicitly requested
   async function loadSummary() {
     if (!range.start || !range.end) {
       alert("Please enter both start and end dates.");
@@ -99,15 +119,42 @@ function App() {
           </label>
 
           <label>
-            Category:
+            Type:
             <select
               value={form.category}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, category: e.target.value }))
-              }
+              onChange={(e) => {
+                const newType = e.target.value;
+                setForm((f) => ({
+                  ...f,
+                  category: newType,
+                  subCategory:
+                    newType === "Income"
+                      ? incomeCategories[0]
+                      : expenseCategories[0],
+                }));
+              }}
             >
               <option value="Income">Income</option>
               <option value="Expense">Expense</option>
+            </select>
+          </label>
+
+          <label>
+            Category:
+            <select
+              value={form.subCategory}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, subCategory: e.target.value }))
+              }
+            >
+              {(form.category === "Income"
+                ? incomeCategories
+                : expenseCategories
+              ).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -167,6 +214,7 @@ function App() {
                 <tr>
                   <th>Date</th>
                   <th>Amount</th>
+                  <th>Type</th>
                   <th>Category</th>
                   <th>Description</th>
                 </tr>
@@ -177,6 +225,7 @@ function App() {
                     <td>{t.date}</td>
                     <td>{t.amount.toFixed(2)}</td>
                     <td>{t.category}</td>
+                    <td>{t.sub_category}</td>
                     <td>{t.description || ""}</td>
                   </tr>
                 ))}

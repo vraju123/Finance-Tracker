@@ -13,3 +13,10 @@ export async function fetchSummary(startDate, endDate) {
   });
   return res.data;
 }
+
+export async function fetchHealthScore(startDate, endDate) {
+  const res = await axios.get(`${API_BASE}/health-score`, {
+    params: { start_date: startDate, end_date: endDate },
+  });
+  return res.data;
+}

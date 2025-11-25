@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createTransaction, fetchSummary } from "./api";
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toISOString().slice(0, 10); // yyyy-mm-dd
 }
 
 function App() {
+  // Form state for adding a transaction
   const [form, setForm] = useState({
     date: todayISO(),
     amount: "",
@@ -13,31 +14,17 @@ function App() {
     description: "",
   });
 
+  // Date range for summary
   const [range, setRange] = useState({
-    start: "2024-01-01",
-    end: todayISO(),
+    start: "",
+    end: "",
   });
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [summaryRequested, setSummaryRequested] = useState(false);
 
-  async function loadSummary() {
-    setLoading(true);
-    try {
-      const data = await fetchSummary(range.start, range.end);
-      setSummary(data);
-    } catch (e) {
-      console.error(e);
-      alert("Failed to load summary");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadSummary();
-  }, []);
-
+  // Add transaction handler (keeps add section behavior, just no auto-summary)
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -47,11 +34,36 @@ function App() {
         category: form.category,
         description: form.description || null,
       });
-      setForm((f) => ({ ...f, amount: "", description: "" }));
-      await loadSummary();
+      // Clear only amount + description after submit
+      setForm((f) => ({
+        ...f,
+        amount: "",
+        description: "",
+      }));
+      // Do NOT auto-load summary here; user must request it explicitly
     } catch (e) {
-      console.error(e);
+      console.error("Add transaction error:", e.response?.data || e.message);
       alert("Failed to add transaction");
+    }
+  }
+
+  // Load summary only when user explicitly requests it
+  async function loadSummary() {
+    if (!range.start || !range.end) {
+      alert("Please enter both start and end dates.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await fetchSummary(range.start, range.end);
+      setSummary(data);
+      setSummaryRequested(true);
+    } catch (e) {
+      console.error("Summary error:", e.response?.data || e.message);
+      alert("Failed to load summary");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -59,6 +71,7 @@ function App() {
     <div style={{ maxWidth: 800, margin: "0 auto", padding: 20 }}>
       <h1>Personal Finance Tracker</h1>
 
+      {/* Add Transaction */}
       <section style={{ marginBottom: 30 }}>
         <h2>Add Transaction</h2>
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 10 }}>
@@ -67,44 +80,53 @@ function App() {
             <input
               type="date"
               value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, date: e.target.value }))
+              }
             />
           </label>
+
           <label>
             Amount:
             <input
               type="number"
               step="0.01"
               value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, amount: e.target.value }))
+              }
             />
           </label>
+
           <label>
             Category:
             <select
               value={form.category}
               onChange={(e) =>
-                setForm({ ...form, category: e.target.value })
+                setForm((f) => ({ ...f, category: e.target.value }))
               }
             >
               <option value="Income">Income</option>
               <option value="Expense">Expense</option>
             </select>
           </label>
+
           <label>
             Description:
             <input
               type="text"
               value={form.description}
               onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
+                setForm((f) => ({ ...f, description: e.target.value }))
               }
             />
           </label>
+
           <button type="submit">Add</button>
         </form>
       </section>
 
+      {/* Summary */}
       <section>
         <h2>Summary</h2>
         <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
@@ -129,11 +151,11 @@ function App() {
             />
           </div>
           <button onClick={loadSummary} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
+            {loading ? "Loading..." : "Get Summary"}
           </button>
         </div>
 
-        {summary && (
+        {summaryRequested && summary && (
           <>
             <p>Total Income: ${summary.total_income.toFixed(2)}</p>
             <p>Total Expense: ${summary.total_expense.toFixed(2)}</p>

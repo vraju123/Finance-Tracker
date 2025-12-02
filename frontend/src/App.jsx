@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createTransaction, fetchSummary } from "./api";
+import { createTransaction, fetchSummary, fetchHealthScore } from "./api";
 
 const expenseCategories = [
   "Food",
@@ -25,22 +25,23 @@ function todayISO() {
 }
 
 function App() {
-  // Form state for adding a transaction
+  // Add Transaction form state
   const [form, setForm] = useState({
     date: todayISO(),
     amount: "",
-    category: "Income",      // Income or Expense (type)
-    subCategory: "Salary",   // specific category within Income/Expense
+    category: "Income",      // Income or Expense
+    subCategory: "Salary",   // specific category
     description: "",
   });
 
-  // Date range for summary
+  // Summary date range
   const [range, setRange] = useState({
     start: "",
     end: "",
   });
 
   const [summary, setSummary] = useState(null);
+  const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(false);
   const [summaryRequested, setSummaryRequested] = useState(false);
 
@@ -55,7 +56,6 @@ function App() {
         sub_category: form.subCategory,
         description: form.description || null,
       });
-      // Clear amount + description; keep date/type/category
       setForm((f) => ({
         ...f,
         amount: "",
@@ -67,7 +67,7 @@ function App() {
     }
   }
 
-  // Load summary only when explicitly requested
+  // Load summary + health score
   async function loadSummary() {
     if (!range.start || !range.end) {
       alert("Please enter both start and end dates.");
@@ -79,6 +79,9 @@ function App() {
       const data = await fetchSummary(range.start, range.end);
       setSummary(data);
       setSummaryRequested(true);
+
+      const healthData = await fetchHealthScore(range.start, range.end);
+      setHealth(healthData);
     } catch (e) {
       console.error("Summary error:", e.response?.data || e.message);
       alert("Failed to load summary");
@@ -110,7 +113,7 @@ function App() {
             Amount:
             <input
               type="number"
-              step="0.01"
+              step="1.00"
               value={form.amount}
               onChange={(e) =>
                 setForm((f) => ({ ...f, amount: e.target.value }))
@@ -202,6 +205,7 @@ function App() {
           </button>
         </div>
 
+        {/* Existing summary UI */}
         {summaryRequested && summary && (
           <>
             <p>Total Income: ${summary.total_income.toFixed(2)}</p>
@@ -231,6 +235,34 @@ function App() {
                 ))}
               </tbody>
             </table>
+          </>
+        )}
+
+        {/* Health block – add this RIGHT AFTER the summary block, still inside <section> */}
+        {summaryRequested && health && (
+          <>
+            <h3>Spending Health</h3>
+            <p>
+              Score: <strong>{health.score}</strong> ({health.label})
+            </p>
+            <p>
+              Savings Rate: {(health.savings_rate * 100).toFixed(1)}%
+            </p>
+
+            {Object.keys(health.expense_breakdown).length > 0 && (
+              <>
+                <h4>Expense Breakdown</h4>
+                <ul>
+                  {Object.entries(health.expense_breakdown).map(
+                    ([subCat, frac]) => (
+                      <li key={subCat}>
+                        {subCat}: {(frac * 100).toFixed(1)}%
+                      </li>
+                    )
+                  )}
+                </ul>
+              </>
+            )}
           </>
         )}
       </section>

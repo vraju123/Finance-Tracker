@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
@@ -11,7 +12,7 @@ def add_transaction(db: Session, data) -> Transaction:
      amount = data.amount,
      category = data.category,
      sub_category = data.sub_category,
-     description = data.description,
+     description = data.description or "",
         
     )
     db.add(txn)
@@ -64,7 +65,6 @@ def get_transactions_and_summary(db: Session, start_date: date, end_date: date):
     return transactions, summary
 
 def get_health_score(db: Session, start_date: date, end_date: date) -> dict:
-    # Reuse the same query logic
     txns, summary = get_transactions_and_summary(db, start_date, end_date)
 
     total_income = summary["total_income"]

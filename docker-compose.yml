@@ -1,17 +1,12 @@
 version: "3.9"
 
 services:
-  db:
-    image: postgres:16
-    container_name: finance_db
-    environment:
-      POSTGRES_USER: finance_user
-      POSTGRES_PASSWORD: finance_pass
-      POSTGRES_DB: finance_db
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env          # contains DATABASE_URL pointing to AWS RDS
     ports:
-      - "5432:5432"
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data  # <- bind mount
-
-# no `volumes:` block needed for bind mount
-
+      - "8000:8000"
+    restart: unless-stopped
